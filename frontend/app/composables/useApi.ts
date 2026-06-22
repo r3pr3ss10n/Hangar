@@ -16,6 +16,7 @@ import type {
   Labels,
   Role,
 } from '~/types/api'
+import * as tus from 'tus-js-client'
 
 /**
  * useApi returns a typed client over the Hangar backend. Every call sends the
@@ -268,14 +269,27 @@ export function useApi() {
   const telegramUnlink = () =>
     api('/api/telegram/unlink', { method: 'POST' })
 
-  // ---- streaming upload with progress (XHR) ----
+  // ---- resumable, parallel upload (tus) ----
+
+  // uploadParallelConnections is how many concurrent client→server connections a
+  // single file is split across. The path to the server is throttled per TCP
+  // flow, so one connection caps throughput; fanning a file out over several
+  // connections (tus concatenation: N partial uploads + a final concat) multiplies
+  // it. 4 measured close to the aggregate ceiling on a throttled link.
+  const uploadParallelConnections = 4
+
+  // uploadChunkSize bounds each PATCH request body. tus requires a fixed chunkSize
+  // when parallelUploads > 1 (it slices the file by byte range). 16 MiB keeps
+  // request count and memory modest while letting each connection stay saturated.
+  const uploadChunkSize = 16 * 1024 * 1024
 
   /**
-   * uploadFile streams a single file into the backend via the streaming
-   * POST /api/files path, reporting progress through onProgress (0..1). It
-   * sends X-Upload-Filename / Content-Type / Content-Length as required by the
-   * contract, with the cookie credentials enabled. Resolves to the created
-   * file row on 201.
+   * uploadFile uploads a single file into the backend via the resumable tus
+   * endpoint (/api/uploads/), splitting it across several parallel connections to
+   * defeat the per-flow throughput cap on the path to the server. Progress is
+   * reported through onProgress (0..1); the signal aborts the upload. Resolves to
+   * the created file row, looked up by the Hangar-File-Id the backend returns when
+   * the assembled file lands in Telegram.
    */
   function uploadFile(
     file: File,
@@ -286,56 +300,66 @@ export function useApi() {
     } = {},
   ): Promise<FileItem> {
     return new Promise<FileItem>((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
-      const query = opts.folderId ? `?folder_id=${encodeURIComponent(opts.folderId)}` : ''
-      xhr.open('POST', `${baseURL}/api/files${query}`, true)
-      xhr.withCredentials = true
-      xhr.setRequestHeader('X-Upload-Filename', encodeURIComponent(file.name))
-      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
-      // Content-Length is set by the browser from the body; we cannot override
-      // forbidden headers via setRequestHeader, so the body's byte length is
-      // authoritative. The backend reads it from the request.
-
-      if (xhr.upload && opts.onProgress) {
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) opts.onProgress!(e.loaded / e.total)
-        }
-      }
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
+      const upload = new tus.Upload(file, {
+        endpoint: `${baseURL}/api/uploads/`,
+        parallelUploads: uploadParallelConnections,
+        chunkSize: uploadChunkSize,
+        // Retry a dropped partial connection instead of failing the whole file.
+        retryDelays: [0, 1000, 3000, 5000],
+        // Cookie auth: tus-js-client v4 has no top-level withCredentials, so set it
+        // on each underlying XHR (create + every PATCH) before it is sent.
+        onBeforeRequest(req) {
+          const xhr = req.getUnderlyingObject() as XMLHttpRequest
+          xhr.withCredentials = true
+        },
+        // Keys mirror what the backend tus hooks read (filename/filetype/folder_id).
+        metadata: {
+          filename: file.name,
+          filetype: file.type || 'application/octet-stream',
+          folder_id: opts.folderId ?? 'root',
+        },
+        onError(err) {
+          reject(err instanceof Error ? err : new Error(String(err)))
+        },
+        onProgress(bytesSent, bytesTotal) {
+          if (opts.onProgress && bytesTotal > 0) {
+            opts.onProgress(bytesSent / bytesTotal)
+          }
+        },
+        async onSuccess(payload) {
+          // The PreFinish hook returns the new id in Hangar-File-Id once the
+          // assembled file is stored in Telegram. It rides the final concat
+          // response, surfaced here as payload.lastResponse.
+          const fileId = payload.lastResponse?.getHeader('Hangar-File-Id')
+          if (!fileId) {
+            reject(new Error('Upload completed but no file id was returned'))
+            return
+          }
           try {
-            const body = JSON.parse(xhr.responseText)
-            resolve(body.file as FileItem)
+            const { file: row } = await fileMeta(fileId)
+            resolve(row)
           } catch (err) {
-            reject(new Error('Upload succeeded but response was unreadable'))
+            reject(err instanceof Error ? err : new Error('Upload finished but file lookup failed'))
           }
-        } else {
-          let msg = `Upload failed (${xhr.status})`
-          try {
-            const body = JSON.parse(xhr.responseText)
-            if (body?.error) msg = body.error
-          } catch {
-            // ignore parse failure, keep status message
-          }
-          reject(new Error(msg))
-        }
-      }
-
-      xhr.onerror = () => reject(new Error('Network error during upload'))
-      xhr.onabort = () => reject(new Error('Upload aborted'))
+        },
+      })
 
       if (opts.signal) {
         if (opts.signal.aborted) {
-          xhr.abort()
+          reject(new Error('Upload aborted'))
           return
         }
-        opts.signal.addEventListener('abort', () => xhr.abort())
+        opts.signal.addEventListener('abort', () => {
+          // shouldTerminate=true tells the server to discard the partial uploads.
+          void upload.abort(true)
+          reject(new Error('Upload aborted'))
+        })
       }
 
-      xhr.send(file)
+      upload.start()
     })
   }
+
 
   return {
     errorMessage,
