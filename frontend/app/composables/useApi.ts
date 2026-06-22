@@ -276,7 +276,7 @@ export function useApi() {
   // flow, so one connection caps throughput; fanning a file out over several
   // connections (tus concatenation: N partial uploads + a final concat) multiplies
   // it. Matches TDesktop's upload session ceiling.
-  const uploadParallelConnections = 6
+  const uploadParallelConnections = 8
 
   // uploadChunkSize bounds each PATCH request body. tus requires a fixed chunkSize
   // when parallelUploads > 1 (it slices the file by byte range). Large enough that
