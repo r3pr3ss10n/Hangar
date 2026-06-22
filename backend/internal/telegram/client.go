@@ -24,8 +24,24 @@ import (
 // uploadPartSize is the upload chunk size (must divide 512 KiB cleanly).
 const uploadPartSize = 512 * 1024
 
-// uploadThreads is the upload concurrency.
-const uploadThreads = 8
+// Upload tuning. Like downloads, upload throughput is bounded by how many
+// concurrent upload.saveBigFilePart requests can be in flight, and MTProto
+// serializes requests on a single connection. The shared main client is one
+// connection, so the old uploader's "threads" all queued behind each other and
+// effectively uploaded single-file. We mirror the official clients (TDesktop's
+// kMaxSessionsCount = 8): a persistent multi-connection pool to the primary DC
+// (uploads must use the regular endpoint — the media cluster rejects them), with
+// enough in-flight parts to keep every connection busy.
+const (
+	// uploadConns is the number of real connections in the upload pool to the
+	// primary DC. Matches TDesktop's upload session ceiling.
+	uploadConns = 8
+	// uploadThreads is the number of concurrent in-flight upload.saveBigFilePart
+	// requests. gotd's pool serves one request per connection at a time, so this
+	// is bounded by uploadConns; a small surplus keeps connections from going idle
+	// between a part completing and the next being read.
+	uploadThreads = 16
+)
 
 // Download tuning. Telegram serves file bytes from dedicated "media cluster"
 // servers (the media_only DC endpoints) and lets a client run MANY concurrent
@@ -94,6 +110,16 @@ type realClient struct {
 	dlDone    chan struct{}
 	dlPool    telegram.CloseInvoker
 	dlAPI     *tg.Client
+
+	// ulPool is a single, long-lived multi-connection pool to the primary DC,
+	// created once on first upload and reused for every subsequent one. Uploads
+	// run on the main client's account/auth key (Client.Pool routes to the primary
+	// DC), so unlike the download pool it needs no separate client or resolver —
+	// just extra connections so upload parts go out in parallel instead of
+	// serializing on the single shared connection.
+	ulPoolMu sync.Mutex
+	ulPool   telegram.CloseInvoker
+	ulAPI    *tg.Client
 }
 
 // downloadPool returns the shared, lazily-created download pool's API client. On
@@ -151,6 +177,25 @@ func (c *realClient) downloadPool() (*tg.Client, error) {
 	return c.dlAPI, nil
 }
 
+// uploadPool returns the shared, lazily-created upload pool's API client. On
+// first use it opens a multi-connection pool on the main client (primary DC,
+// reusing the account's auth key) so upload parts can be sent concurrently.
+func (c *realClient) uploadPool() (*tg.Client, error) {
+	c.ulPoolMu.Lock()
+	defer c.ulPoolMu.Unlock()
+	if c.ulAPI != nil {
+		return c.ulAPI, nil
+	}
+
+	inv, err := c.client.Pool(int64(uploadConns))
+	if err != nil {
+		return nil, err
+	}
+	c.ulPool = inv
+	c.ulAPI = tg.NewClient(inv)
+	return c.ulAPI, nil
+}
+
 // newRealClient builds and starts a live gotd client. It blocks until the
 // client's Run loop reports the connection is ready (or the dial fails).
 func newRealClient(ctx context.Context, cfg Config, storage session.Storage) (tgClient, error) {
@@ -191,6 +236,13 @@ func newRealClient(ctx context.Context, cfg Config, storage session.Storage) (tg
 				slog.Default().Warn("telegram: download pool warm-up failed", "error", err)
 			}
 		}()
+		// Warm the upload pool too, so its connections to the primary DC are open
+		// before the first upload.
+		go func() {
+			if _, err := rc.uploadPool(); err != nil {
+				slog.Default().Warn("telegram: upload pool warm-up failed", "error", err)
+			}
+		}()
 		return rc, nil
 	case err := <-runErr:
 		cancel()
@@ -217,6 +269,13 @@ func (c *realClient) stop() {
 		c.dlClient = nil
 	}
 	c.dlPoolMu.Unlock()
+	c.ulPoolMu.Lock()
+	if c.ulPool != nil {
+		_ = c.ulPool.Close()
+		c.ulPool = nil
+		c.ulAPI = nil
+	}
+	c.ulPoolMu.Unlock()
 	c.runCancel()
 	<-c.done
 }
@@ -363,7 +422,16 @@ func (ch channelRef) inputChannel() *tg.InputChannel {
 func (c *realClient) uploadDocument(ctx context.Context, ch channelRef, name, mime string, size int64, r io.Reader) (StoredFile, error) {
 	var stored StoredFile
 	err := withFlood(ctx, func() error {
-		up := uploader.NewUploader(c.api).WithPartSize(uploadPartSize).WithThreads(uploadThreads)
+		// Send upload parts over the multi-connection pool so they go out in
+		// parallel; fall back to the shared connection if the pool is unavailable.
+		api := c.api
+		if pa, err := c.uploadPool(); err == nil {
+			api = pa
+		} else {
+			slog.Default().Warn("upload: pool unavailable, using shared connection", "error", err)
+		}
+
+		up := uploader.NewUploader(api).WithPartSize(uploadPartSize).WithThreads(uploadThreads)
 		file, err := up.Upload(ctx, uploader.NewUpload(name, r, size))
 		if err != nil {
 			return fmt.Errorf("upload file: %w", err)
