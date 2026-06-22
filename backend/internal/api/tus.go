@@ -83,6 +83,12 @@ func (s *Server) newTusHandler() (http.Handler, error) {
 	return tushandler.NewHandler(tushandler.Config{
 		BasePath:      tusBasePath,
 		StoreComposer: composer,
+		// Behind angie (TLS terminator) the backend sees plain http, so without
+		// this tusd would hand clients an http:// upload Location and the browser
+		// would block the PATCH/HEAD as mixed content on an https page. Honour
+		// X-Forwarded-Proto/Host (angie sets X-Forwarded-Proto $scheme) so the
+		// advertised URLs match the public https origin.
+		RespectForwardedHeaders: true,
 		// Logger intentionally unset: tusd v2 wants golang.org/x/exp/slog, not the
 		// stdlib log/slog we use everywhere else, so we let it default internally.
 		PreUploadCreateCallback: s.tusPreCreate,
