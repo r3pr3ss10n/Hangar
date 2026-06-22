@@ -275,13 +275,15 @@ export function useApi() {
   // single file is split across. The path to the server is throttled per TCP
   // flow, so one connection caps throughput; fanning a file out over several
   // connections (tus concatenation: N partial uploads + a final concat) multiplies
-  // it. 4 measured close to the aggregate ceiling on a throttled link.
-  const uploadParallelConnections = 4
+  // it. Matches TDesktop's upload session ceiling.
+  const uploadParallelConnections = 6
 
   // uploadChunkSize bounds each PATCH request body. tus requires a fixed chunkSize
-  // when parallelUploads > 1 (it slices the file by byte range). 16 MiB keeps
-  // request count and memory modest while letting each connection stay saturated.
-  const uploadChunkSize = 16 * 1024 * 1024
+  // when parallelUploads > 1 (it slices the file by byte range). Large enough that
+  // each partial (file / parallelConnections) usually fits in one PATCH — a single
+  // continuous stream per connection avoids the round-trip stalls between chunks
+  // that throttle a chunked flow.
+  const uploadChunkSize = 64 * 1024 * 1024
 
   /**
    * uploadFile uploads a single file into the backend via the resumable tus
