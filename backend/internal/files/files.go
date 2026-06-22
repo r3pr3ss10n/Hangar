@@ -127,6 +127,9 @@ type NewFile struct {
 	// ThumbRef is an optional generated thumbnail (JPEG bytes); nil for files
 	// that have no preview thumbnail.
 	ThumbRef []byte
+	// EncIV is the per-file AES-256-CTR initialization vector when the stored
+	// bytes are encrypted, or nil for a cleartext (legacy) file.
+	EncIV []byte
 }
 
 // AssertFolderOwned validates that an optional target folder exists and is owned
@@ -155,6 +158,7 @@ func (s *Service) CreateFile(ctx context.Context, f NewFile) (dbsqlc.File, error
 		TgFileReference: f.TG.FileReference,
 		TgDcID:          int32(f.TG.DCID),
 		ThumbRef:        f.ThumbRef,
+		EncIv:           f.EncIV,
 	})
 	if err != nil {
 		return dbsqlc.File{}, fmt.Errorf("create file: %w", err)

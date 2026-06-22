@@ -13,6 +13,7 @@ import (
 
 	"github.com/r3pr3ss10n/hangar/backend/internal/auth"
 	dbsqlc "github.com/r3pr3ss10n/hangar/backend/internal/db/sqlc"
+	"github.com/r3pr3ss10n/hangar/backend/internal/filecrypt"
 	"github.com/r3pr3ss10n/hangar/backend/internal/telegram"
 )
 
@@ -264,8 +265,24 @@ func (s *Server) streamFile(w http.ResponseWriter, r *http.Request, file dbsqlc.
 		return
 	}
 	cw := &countingWriter{w: w}
+
+	// The bytes in Telegram are ciphertext when the row carries an IV (files
+	// uploaded after encryption was introduced). Decrypt them on the way out,
+	// seeding the AES-CTR keystream at the requested range start so a Range
+	// request decrypts correctly without reading from the beginning. A nil IV is
+	// a legacy cleartext file and streams through unchanged.
+	var sink io.Writer = cw
+	if len(file.EncIv) > 0 {
+		dw, err := filecrypt.DecryptingWriter(cw, s.cfg.EncryptionKey, file.EncIv, start)
+		if err != nil {
+			s.logger.Error("api: init decrypting writer failed", "error", err, "file_id", file.ID)
+			return
+		}
+		sink = dw
+	}
+
 	started := time.Now()
-	err := s.telegram.Download(r.Context(), ref, start, length, cw, refresh)
+	err := s.telegram.Download(r.Context(), ref, start, length, sink, refresh)
 	elapsed := time.Since(started)
 	mbps := 0.0
 	if secs := elapsed.Seconds(); secs > 0 {

@@ -1,10 +1,12 @@
 -- name: CreateFile :one
 INSERT INTO files (
     owner_id, folder_id, name, size, mime, sha256,
-    tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref
+    tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref,
+    enc_iv
 ) VALUES (
     $1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $10, $11, $12
+    $7, $8, $9, $10, $11, $12,
+    $13
 )
 RETURNING *;
 

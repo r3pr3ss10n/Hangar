@@ -26,6 +26,7 @@ type File struct {
 	ThumbRef        []byte     `json:"thumb_ref"`
 	CreatedAt       time.Time  `json:"created_at"`
 	DeletedAt       *time.Time `json:"deleted_at"`
+	EncIv           []byte     `json:"enc_iv"`
 }
 
 type FileShare struct {

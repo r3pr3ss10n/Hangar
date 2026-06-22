@@ -15,12 +15,14 @@ import (
 const createFile = `-- name: CreateFile :one
 INSERT INTO files (
     owner_id, folder_id, name, size, mime, sha256,
-    tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref
+    tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref,
+    enc_iv
 ) VALUES (
     $1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $10, $11, $12
+    $7, $8, $9, $10, $11, $12,
+    $13
 )
-RETURNING id, owner_id, folder_id, name, size, mime, sha256, tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref, created_at, deleted_at
+RETURNING id, owner_id, folder_id, name, size, mime, sha256, tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref, created_at, deleted_at, enc_iv
 `
 
 type CreateFileParams struct {
@@ -36,6 +38,7 @@ type CreateFileParams struct {
 	TgFileReference []byte     `json:"tg_file_reference"`
 	TgDcID          int32      `json:"tg_dc_id"`
 	ThumbRef        []byte     `json:"thumb_ref"`
+	EncIv           []byte     `json:"enc_iv"`
 }
 
 func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, error) {
@@ -52,6 +55,7 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, e
 		arg.TgFileReference,
 		arg.TgDcID,
 		arg.ThumbRef,
+		arg.EncIv,
 	)
 	var i File
 	err := row.Scan(
@@ -70,12 +74,13 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, e
 		&i.ThumbRef,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.EncIv,
 	)
 	return i, err
 }
 
 const getFile = `-- name: GetFile :one
-SELECT id, owner_id, folder_id, name, size, mime, sha256, tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref, created_at, deleted_at FROM files WHERE id = $1 AND deleted_at IS NULL
+SELECT id, owner_id, folder_id, name, size, mime, sha256, tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref, created_at, deleted_at, enc_iv FROM files WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetFile(ctx context.Context, id uuid.UUID) (File, error) {
@@ -97,6 +102,7 @@ func (q *Queries) GetFile(ctx context.Context, id uuid.UUID) (File, error) {
 		&i.ThumbRef,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.EncIv,
 	)
 	return i, err
 }
@@ -111,7 +117,7 @@ func (q *Queries) HardDeleteFile(ctx context.Context, id uuid.UUID) error {
 }
 
 const listDeletedFiles = `-- name: ListDeletedFiles :many
-SELECT id, owner_id, folder_id, name, size, mime, sha256, tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref, created_at, deleted_at FROM files WHERE deleted_at IS NOT NULL ORDER BY deleted_at ASC
+SELECT id, owner_id, folder_id, name, size, mime, sha256, tg_message_id, tg_document_id, tg_access_hash, tg_file_reference, tg_dc_id, thumb_ref, created_at, deleted_at, enc_iv FROM files WHERE deleted_at IS NOT NULL ORDER BY deleted_at ASC
 `
 
 func (q *Queries) ListDeletedFiles(ctx context.Context) ([]File, error) {
@@ -139,6 +145,7 @@ func (q *Queries) ListDeletedFiles(ctx context.Context) ([]File, error) {
 			&i.ThumbRef,
 			&i.CreatedAt,
 			&i.DeletedAt,
+			&i.EncIv,
 		); err != nil {
 			return nil, err
 		}

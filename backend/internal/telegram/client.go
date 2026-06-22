@@ -2,6 +2,8 @@ package telegram
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -419,7 +421,17 @@ func (ch channelRef) inputChannel() *tg.InputChannel {
 
 // uploadDocument streams the reader as a document into the channel and reads the
 // stored document handle off the resulting message.
+//
+// The real name and mime are intentionally NOT sent to Telegram: a document's
+// filename and MIME are stored as plaintext attributes on the message, so using
+// the true values would leak what each file is to anyone who reads the channel —
+// even though the bytes themselves are encrypted. Instead every document gets an
+// opaque random name and a generic MIME. The true name/mime/size live in
+// Postgres (the trusted server) and are never read back from Telegram, so this
+// loses nothing.
 func (c *realClient) uploadDocument(ctx context.Context, ch channelRef, name, mime string, size int64, r io.Reader) (StoredFile, error) {
+	_ = name // deliberately unused: see doc comment (metadata privacy)
+	_ = mime // deliberately unused: see doc comment (metadata privacy)
 	var stored StoredFile
 	err := withFlood(ctx, func() error {
 		// Send upload parts over the multi-connection pool so they go out in
@@ -431,14 +443,21 @@ func (c *realClient) uploadDocument(ctx context.Context, ch channelRef, name, mi
 			slog.Default().Warn("upload: pool unavailable, using shared connection", "error", err)
 		}
 
+		// Opaque on-channel identity: a random name + generic MIME, so the stored
+		// document reveals nothing about the file.
+		opaqueName, err := opaqueDocName()
+		if err != nil {
+			return err
+		}
+
 		up := uploader.NewUploader(api).WithPartSize(uploadPartSize).WithThreads(uploadThreads)
-		file, err := up.Upload(ctx, uploader.NewUpload(name, r, size))
+		file, err := up.Upload(ctx, uploader.NewUpload(opaqueName, r, size))
 		if err != nil {
 			return fmt.Errorf("upload file: %w", err)
 		}
 
 		sender := message.NewSender(c.api)
-		doc := message.UploadedDocument(file).Filename(name).MIME(mime)
+		doc := message.UploadedDocument(file).Filename(opaqueName).MIME("application/octet-stream")
 		msg, err := unpack.Message(sender.To(ch.inputPeer()).Media(ctx, doc))
 		if err != nil {
 			return fmt.Errorf("send document: %w", err)
@@ -462,6 +481,17 @@ func (c *realClient) uploadDocument(ctx context.Context, ch channelRef, name, mi
 		return StoredFile{}, err
 	}
 	return stored, nil
+}
+
+// opaqueDocName returns a random, content-free filename for a stored document
+// (16 random bytes hex-encoded, ".bin" suffix). It exists so the Telegram
+// channel never carries a meaningful filename.
+func opaqueDocName() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate opaque name: %w", err)
+	}
+	return hex.EncodeToString(b) + ".bin", nil
 }
 
 // documentFromMessage extracts the attached *tg.Document from a message.

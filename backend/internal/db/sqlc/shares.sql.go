@@ -67,7 +67,7 @@ func (q *Queries) DeleteFileShareOwned(ctx context.Context, arg DeleteFileShareO
 }
 
 const getShareFile = `-- name: GetShareFile :one
-SELECT f.id, f.owner_id, f.folder_id, f.name, f.size, f.mime, f.sha256, f.tg_message_id, f.tg_document_id, f.tg_access_hash, f.tg_file_reference, f.tg_dc_id, f.thumb_ref, f.created_at, f.deleted_at, s.expires_at AS share_expires_at
+SELECT f.id, f.owner_id, f.folder_id, f.name, f.size, f.mime, f.sha256, f.tg_message_id, f.tg_document_id, f.tg_access_hash, f.tg_file_reference, f.tg_dc_id, f.thumb_ref, f.created_at, f.deleted_at, f.enc_iv, s.expires_at AS share_expires_at
 FROM file_shares s
 JOIN files f ON f.id = s.file_id
 WHERE s.token = $1 AND f.deleted_at IS NULL
@@ -89,6 +89,7 @@ type GetShareFileRow struct {
 	ThumbRef        []byte     `json:"thumb_ref"`
 	CreatedAt       time.Time  `json:"created_at"`
 	DeletedAt       *time.Time `json:"deleted_at"`
+	EncIv           []byte     `json:"enc_iv"`
 	ShareExpiresAt  *time.Time `json:"share_expires_at"`
 }
 
@@ -114,6 +115,7 @@ func (q *Queries) GetShareFile(ctx context.Context, token string) (GetShareFileR
 		&i.ThumbRef,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.EncIv,
 		&i.ShareExpiresAt,
 	)
 	return i, err

@@ -12,11 +12,13 @@ Hangar puts a real drive on top of it: folders, search, previews, sharing. Your 
 
 1. You link one Telegram account - it becomes the storage backend. Every uploaded file is stored as a document in a private channel that account owns. You can archive it. 
 2. The Go backend uploads your files to Telegram over several parallel connections and keeps only metadata (names, folders, thumbnails) in Postgres. File bytes are briefly staged on disk during upload to reassemble the parallel streams, then deleted once they reach Telegram - they're never stored on your server.
-3. Downloads are streamed back from Telegram on demand with HTTP range support, so seeking in a video or resuming a download just works.
-4. A Nuxt 4 SPA gives you the Drive-style frontend, and Android app talks to the same backend from your phone.
+3. Your files are encrypted before they ever reach Telegram (AES-256-CTR, keyed by your `HANGAR_ENCRYPTION_KEY`), and the documents land in the channel under opaque random names with no MIME type. So even though the storage account isn't yours to fully trust, the channel holds nothing but unlabelled ciphertext - the real names, types and folders live only in your Postgres. The cipher is seekable, so range requests (video seeking, resuming a download) still work, and decryption is hardware-accelerated, so downloads aren't slowed.
+4. Downloads are streamed back from Telegram on demand with HTTP range support, so seeking in a video or resuming a download just works.
+5. A Nuxt 4 SPA gives you the Drive-style frontend, and Android app talks to the same backend from your phone.
 
 ## Features
 
+- End-to-Telegram encryption: file contents are AES-256-CTR encrypted and stored under opaque names, so the storage channel only ever holds unlabelled ciphertext
 - Folders, drag-and-drop upload, drag-to-move, grid & list views
 - Fuzzy search across your whole drive + a ⌘K command palette
 - Image thumbnails and an in-app preview
@@ -36,7 +38,7 @@ You'll need Docker, and a Telegram `api_id` / `api_hash` from [my.telegram.org/a
    ```bash
    cp .env.example .env
    ```
-2. Generate a 32-byte key (encrypts the stored Telegram session) and paste it into `HANGAR_ENCRYPTION_KEY`:
+2. Generate a 32-byte key (encrypts your stored files and the Telegram session) and paste it into `HANGAR_ENCRYPTION_KEY`:
    ```bash
    openssl rand -base64 32
    ```

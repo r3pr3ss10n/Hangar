@@ -19,6 +19,7 @@ import (
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
 
 	"github.com/r3pr3ss10n/hangar/backend/internal/auth"
+	"github.com/r3pr3ss10n/hangar/backend/internal/filecrypt"
 	"github.com/r3pr3ss10n/hangar/backend/internal/files"
 	"github.com/r3pr3ss10n/hangar/backend/internal/telegram"
 	"github.com/r3pr3ss10n/hangar/backend/internal/thumb"
@@ -214,9 +215,20 @@ func (s *Server) tusPreFinish(hook tushandler.HookEvent, store filestore.FileSto
 	}
 	defer reader.Close()
 
-	// Hash the bytes as they stream to Telegram so the stored sha256 is exact.
+	// Hash the plaintext as it streams so the stored sha256 is a true digest of
+	// the file's contents (computed before encryption), then encrypt the body on
+	// its way to Telegram so the channel only ever holds ciphertext. Each file
+	// gets a fresh IV, persisted on the row for decryption on download.
+	iv, err := filecrypt.NewIV()
+	if err != nil {
+		return noResp, fmt.Errorf("generate encryption iv: %w", err)
+	}
 	hasher := sha256.New()
-	stored, err := s.telegram.Upload(ctx, filename, mime, info.Size, io.TeeReader(reader, hasher))
+	encReader, err := filecrypt.EncryptingReader(io.TeeReader(reader, hasher), s.cfg.EncryptionKey, iv)
+	if err != nil {
+		return noResp, fmt.Errorf("init encrypting reader: %w", err)
+	}
+	stored, err := s.telegram.Upload(ctx, filename, mime, info.Size, encReader)
 	if err != nil {
 		return noResp, tusError(err)
 	}
@@ -238,6 +250,7 @@ func (s *Server) tusPreFinish(hook tushandler.HookEvent, store filestore.FileSto
 		Size:     stored.Size,
 		TG:       stored,
 		ThumbRef: thumbRef,
+		EncIV:    iv,
 	})
 	if err != nil {
 		// Bytes already in Telegram; metadata write failed. Roll back the upload
