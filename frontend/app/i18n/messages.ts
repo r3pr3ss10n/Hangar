@@ -114,6 +114,7 @@ const en: Table = {
   "drive.uploadFiles": "Upload files",
   "drive.listView": "List view",
   "drive.gridView": "Grid view",
+  "drive.refresh": "Refresh",
   "drive.emptyTitle": "This folder is empty",
   "drive.emptyDesc":
     "Drag files anywhere on the page, or use the buttons above to get started.",
@@ -453,6 +454,7 @@ const ruTable: Table = {
   "drive.uploadFiles": "Загрузить файлы",
   "drive.listView": "Список",
   "drive.gridView": "Сетка",
+  "drive.refresh": "Обновить",
   "drive.emptyTitle": "Эта папка пуста",
   "drive.emptyDesc":
     "Перетащите файлы в любое место страницы или воспользуйтесь кнопками ниже, чтобы начать.",

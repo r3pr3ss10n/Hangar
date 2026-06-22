@@ -16,6 +16,7 @@ import {
   Check,
   LayoutGrid,
   List as ListIcon,
+  RefreshCw,
 } from 'lucide-vue-next'
 import type { Folder, FileItem } from '~/types/api'
 import { useDriveStore } from '~/stores/drive'
@@ -384,6 +385,17 @@ async function confirmMove() {
         </p>
       </div>
       <div class="flex items-center gap-2">
+        <!-- Refresh the current folder listing (e.g. to pick up a file just
+             uploaded from another device). -->
+        <button
+          class="flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          :aria-label="t('drive.refresh')"
+          :title="t('drive.refresh')"
+          :disabled="drive.loading"
+          @click="drive.refresh()"
+        >
+          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': drive.loading }" />
+        </button>
         <!-- View mode toggle -->
         <div class="mr-1 flex items-center rounded-md border p-0.5">
           <button
