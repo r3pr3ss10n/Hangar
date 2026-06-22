@@ -96,6 +96,13 @@ func (s *Server) newTusHandler() (http.Handler, error) {
 // tusPreCreate authenticates the creator, enforces the per-file ceiling, requires
 // a filename, and stamps the owner id into the upload metadata. Returning an
 // error aborts creation with the error's HTTP status.
+//
+// Parallel uploads (tus concatenation) arrive as several partial creates followed
+// by one final create. Partial uploads carry no user metadata (filename/folder)
+// and only a slice of the total size, so file-level validation is skipped for
+// them and runs on the final upload instead — by then tusd has summed the partial
+// sizes into hook.Upload.Size, so the ceiling check is accurate. A plain upload
+// (neither partial nor final) is validated exactly as before.
 func (s *Server) tusPreCreate(hook tushandler.HookEvent) (tushandler.HTTPResponse, tushandler.FileInfoChanges, error) {
 	var noResp tushandler.HTTPResponse
 	var noChanges tushandler.FileInfoChanges
@@ -104,6 +111,18 @@ func (s *Server) tusPreCreate(hook tushandler.HookEvent) (tushandler.HTTPRespons
 	if !ok {
 		return noResp, noChanges, tushandler.NewError("ERR_UNAUTHORIZED", "unauthorized", http.StatusUnauthorized)
 	}
+
+	// A partial upload is just a byte slice destined for concatenation: stamp the
+	// owner (for ownership + later temp-file cleanup) and skip file-level checks.
+	if hook.Upload.IsPartial {
+		md := make(tushandler.MetaData, len(hook.Upload.MetaData)+1)
+		for k, v := range hook.Upload.MetaData {
+			md[k] = v
+		}
+		md[tusMetaOwnerID] = user.ID.String()
+		return noResp, tushandler.FileInfoChanges{MetaData: md}, nil
+	}
+
 	if filename := strings.TrimSpace(hook.Upload.MetaData["filename"]); filename == "" {
 		return noResp, noChanges, tushandler.NewError("ERR_FILENAME_REQUIRED", "filename metadata is required", http.StatusBadRequest)
 	}
@@ -141,6 +160,14 @@ func (s *Server) tusPreFinish(hook tushandler.HookEvent, store filestore.FileSto
 	ctx := hook.Context
 	info := hook.Upload
 
+	// A partial upload completing is not a finished file — it is one slice awaiting
+	// concatenation. The finish callback fires for every completed upload, so guard
+	// against streaming a partial into Telegram. The final concat upload (assembled
+	// from these partials) is the one that proceeds below.
+	if info.IsPartial {
+		return noResp, nil
+	}
+
 	ownerID, err := uuid.Parse(info.MetaData[tusMetaOwnerID])
 	if err != nil {
 		return noResp, tushandler.NewError("ERR_NO_OWNER", "upload is missing its owner", http.StatusInternalServerError)
@@ -161,13 +188,15 @@ func (s *Server) tusPreFinish(hook tushandler.HookEvent, store filestore.FileSto
 	}
 	// Always remove the completed temp file once we're done with it, regardless
 	// of which exit path we take below — otherwise a CreateFile/upload failure
-	// would leave the full file stranded on disk.
+	// would leave the full file stranded on disk. For a concat upload, also remove
+	// the partial temp files it was assembled from.
 	defer func() {
 		if t, ok := upload.(tushandler.TerminatableUpload); ok {
 			if termErr := t.Terminate(ctx); termErr != nil {
 				s.logger.Warn("tus: failed to remove temp upload", "id", info.ID, "err", termErr)
 			}
 		}
+		s.tusRemovePartials(ctx, store, info.PartialUploads)
 	}()
 
 	reader, err := upload.GetReader(ctx)
@@ -236,6 +265,31 @@ func (s *Server) tusThumb(ctx context.Context, upload tushandler.Upload, mime, n
 		return nil
 	}
 	return s.makeThumb(data, mime, name)
+}
+
+// tusRemovePartials best-effort deletes the partial upload temp files that a
+// concatenated final upload was assembled from. Their bytes already live in the
+// final temp file (and thus in Telegram), so leaving them would strand disk
+// space. ids are tus upload ids (from FileInfo.PartialUploads); a failure to
+// remove one is logged, not fatal.
+func (s *Server) tusRemovePartials(ctx context.Context, store filestore.FileStore, ids []string) {
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		upload, err := store.GetUpload(ctx, id)
+		if err != nil {
+			s.logger.Warn("tus: failed to open partial upload for cleanup", "id", id, "err", err)
+			continue
+		}
+		t, ok := upload.(tushandler.TerminatableUpload)
+		if !ok {
+			continue
+		}
+		if termErr := t.Terminate(ctx); termErr != nil {
+			s.logger.Warn("tus: failed to remove partial upload", "id", id, "err", termErr)
+		}
+	}
 }
 
 // parseFolderMeta interprets the optional folder_id tus metadata value; empty or

@@ -85,6 +85,13 @@ func UserFromContext(ctx context.Context) (dbsqlc.User, bool) {
 	return u, ok
 }
 
+// ContextWithUser returns a copy of ctx carrying user, as RequireAuth would. It
+// exists so handler/hook tests can construct an authenticated context without
+// standing up the full middleware and session machinery.
+func ContextWithUser(ctx context.Context, user dbsqlc.User) context.Context {
+	return context.WithValue(ctx, userContextKey, user)
+}
+
 // SetSessionCookie writes the session cookie carrying the raw token. The cookie
 // is httpOnly, scoped to the whole site (Path=/), SameSite=Lax, and Secure
 // according to Params. Its Max-Age matches the session TTL.
