@@ -6,14 +6,14 @@ Your own unlimited cloud drive, backed by Telegram.
 
 Telegram gives away **unlimited** file storage for free (2 GB per file, 4 GB on Premium), and nobody actually uses it for that, because the only "UI" is dumping files into Saved Messages and never finding them again.
 
-Hangar puts a real drive on top of it: folders, search, previews, sharing. Your files live in a private Telegram channel, you get a proper interface, and you host the whole thing yourself.
+Hangar puts a real drive on top of it: folders, search, previews, sharing. Your files live in a private Telegram channel, you get a proper interface — in the browser or as a native Android app — and you host the whole thing yourself.
 
 ## How it works
 
 1. You link one Telegram account - it becomes the storage backend. Every uploaded file is stored as a document in a private channel that account owns. You can archive it. 
 2. The Go backend streams your uploads straight to Telegram and keeps only metadata (names, folders, thumbnails) in Postgres - the actual bytes never sit on your server.
 3. Downloads are streamed back from Telegram on demand with HTTP range support, so seeking in a video or resuming a download just works.
-4. A Nuxt 4 SPA gives you the Drive-style frontend.
+4. A Nuxt 4 SPA gives you the Drive-style frontend, and Android app talks to the same backend from your phone.
 
 ## Features
 
@@ -25,6 +25,7 @@ Hangar puts a real drive on top of it: folders, search, previews, sharing. Your 
 - Colored tags to organize everything
 - Dark / light theme
 - Multi-user with an admin panel
+- Native Android app
 - More coming?
 
 ## Quick start
@@ -44,7 +45,7 @@ You'll need Docker, and a Telegram `api_id` / `api_hash` from [my.telegram.org/a
    ```bash
    docker compose up -d --build
    ```
-5. Open [localhost:3000](http://localhost:3000), create the admin account, then go to **Admin → Telegram** and link your account. Done.
+5. Open [localhost:3000](http://localhost:3000), follow the onboarding. Done.
 
 There's a `make` shortcut for everything — run `make help`.
 
@@ -59,9 +60,24 @@ make frontend   # Nuxt dev server on :3000
 
 Postgres comes from `docker compose up -d postgres`. See [.env.example](.env.example) for all config.
 
+## Android app
+
+A native client lives in [`android/`](android) (Kotlin + Jetpack Compose). It talks to the same backend — on first launch you enter your Hangar server's URL, then sign in with your account.
+
+Please notice that setup isn't implemented on Android. Before launching the app you already must have an active admin account. 
+
+Build a debug APK (needs the Android SDK):
+
+```bash
+cd android
+./gradlew assembleDebug   # app/build/outputs/apk/debug/app-debug.apk
+```
+
+Or open the `android/` folder in Android Studio and hit Run.
+
 ## Stack
 
-Go + [chi](https://github.com/go-chi/chi) + sqlc/Postgres on the backend, Nuxt 4 + Tailwind on the frontend, [gotd](https://github.com/gotd/td) for the Telegram MTProto client.
+Go + [chi](https://github.com/go-chi/chi) + sqlc/Postgres on the backend, Nuxt 4 + Tailwind on the frontend, Kotlin + Jetpack Compose for the Android app, [gotd](https://github.com/gotd/td) for the Telegram MTProto client.
 
 ## Telegram API & Terms of Service
 

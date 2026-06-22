@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Hangar mark: a 3D box outline, matching the web favicon. The artwork is drawn
+  in the source SVG's path coords (bbox 3..21, centred on 12,12) and mapped into
+  the 108dp adaptive-icon canvas centred on (54,54) at a size that sits well
+  inside the centre safe zone. The white stroke doubles as the monochrome layer
+  (the system tints it on Android 13+).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="2.4"
+        android:scaleY="2.4"
+        android:translateX="25.2"
+        android:translateY="25.2">
+        <path
+            android:strokeColor="#FAFAFA"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M12,3 L3,8.5 L3,15.5 L12,21 L21,15.5 L21,8.5 L12,3 Z" />
+        <path
+            android:strokeColor="#FAFAFA"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M12,12 L3,8.5 M12,12 L21,8.5 M12,12 L12,21" />
+    </group>
+</vector>
