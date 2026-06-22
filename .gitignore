@@ -1,0 +1,22 @@
+# Backend
+/backend/bin/
+/backend/server
+*.test
+/data/
+/backend/data/
+
+# Frontend
+node_modules/
+/frontend/.nuxt/
+/frontend/.output/
+/frontend/dist/
+.DS_Store
+
+# Env / secrets
+.env
+.env.local
+*.session
+
+# Editor
+.idea/
+.vscode/
