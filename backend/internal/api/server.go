@@ -190,13 +190,11 @@ func (s *Server) Router() http.Handler {
 			r.Post("/folders/{id}/tags", s.handleAddFolderTag)
 			r.Delete("/folders/{id}/tags/{tagId}", s.handleRemoveFolderTag)
 
-			// streaming upload (byte route, rate limited per user)
-			r.With(s.uploadLim.middleware).Post("/files", s.handleUpload)
 			// ranged download (byte route, rate limited per user)
 			r.With(s.dlLim.middleware).Get("/files/{id}", s.handleDownload)
 		})
 
-		// --- resumable upload (tus), behind RequireAuth ---
+		// --- resumable, parallel upload (tus), behind RequireAuth ---
 		s.mountTus(r)
 
 		// --- admin ---

@@ -37,18 +37,21 @@ const tusMetaOwnerID = "hangarOwnerId"
 const tusMetaGenThumbs = "hangarGenThumbs"
 
 // mountTus wires the resumable (tus) upload endpoint at /api/uploads/ behind
-// RequireAuth and the per-user rate limiter. Chunks land in a filestore under
-// cfg.DataDir/uploads; when an upload completes, tusPreFinish streams the temp
-// file straight into Telegram, records the file row, returns the new id in the
-// Hangar-File-Id response header, and deletes the temp file.
+// RequireAuth and the per-user rate limiter. This is the only upload path:
+// clients split each file into several partial uploads sent over parallel
+// connections (tus concatenation), which defeats the per-TCP-flow throughput
+// throttle on the way to the server. The partial chunks land in a filestore
+// under cfg.DataDir/uploads; tusd concatenates them into one temp file, and
+// tusPreFinish streams that assembled file into Telegram, records the file row,
+// returns the new id in the Hangar-File-Id response header, and deletes the temp
+// files.
 //
-// Resumable upload is an enhancement over the streaming POST /api/files path. If
-// the store cannot be initialised we degrade to a clear 503 there rather than
-// refuse to boot.
+// If the store cannot be initialised we expose a clear 503 on the upload routes
+// rather than refuse to boot.
 func (s *Server) mountTus(r chi.Router) {
 	h, err := s.newTusHandler()
 	if err != nil {
-		s.logger.Error("tus: disabled (init failed); clients should use POST /api/files", "err", err)
+		s.logger.Error("tus: upload endpoint disabled (store init failed)", "err", err)
 		r.Group(func(r chi.Router) {
 			r.Use(s.auth.RequireAuth)
 			r.Handle("/uploads", http.HandlerFunc(s.handleTusUnavailable))
@@ -330,8 +333,9 @@ func tusError(err error) error {
 }
 
 // handleTusUnavailable is the degraded response when the tus store failed to
-// initialise; clients should fall back to the streaming POST /api/files path.
+// initialise — uploads are unavailable until the server can create its upload
+// directory.
 func (s *Server) handleTusUnavailable(w http.ResponseWriter, _ *http.Request) {
 	s.writeErr(w, http.StatusServiceUnavailable,
-		"resumable (tus) uploads are unavailable; use POST /api/files")
+		"uploads are temporarily unavailable")
 }

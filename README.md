@@ -11,7 +11,7 @@ Hangar puts a real drive on top of it: folders, search, previews, sharing. Your 
 ## How it works
 
 1. You link one Telegram account - it becomes the storage backend. Every uploaded file is stored as a document in a private channel that account owns. You can archive it. 
-2. The Go backend streams your uploads straight to Telegram and keeps only metadata (names, folders, thumbnails) in Postgres - the actual bytes never sit on your server.
+2. The Go backend uploads your files to Telegram over several parallel connections and keeps only metadata (names, folders, thumbnails) in Postgres. File bytes are briefly staged on disk during upload to reassemble the parallel streams, then deleted once they reach Telegram - they're never stored on your server.
 3. Downloads are streamed back from Telegram on demand with HTTP range support, so seeking in a video or resuming a download just works.
 4. A Nuxt 4 SPA gives you the Drive-style frontend, and Android app talks to the same backend from your phone.
 

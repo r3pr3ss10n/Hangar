@@ -19,7 +19,7 @@ func (s *Server) corsMiddleware() func(http.Handler) http.Handler {
 	return cors.Handler(cors.Options{
 		AllowedOrigins:   s.cfg.CORSOrigins,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodHead, http.MethodOptions},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "Content-Length", "X-Upload-Filename", "X-Requested-With", "Tus-Resumable", "Upload-Length", "Upload-Metadata", "Upload-Offset", "Upload-Concat"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "Content-Length", "X-Requested-With", "Tus-Resumable", "Upload-Length", "Upload-Metadata", "Upload-Offset", "Upload-Concat"},
 		ExposedHeaders:   []string{"Hangar-File-Id", "Content-Disposition", "Content-Range", "Accept-Ranges", "Location", "Tus-Resumable", "Upload-Offset", "Upload-Length", "Upload-Metadata"},
 		AllowCredentials: true,
 		MaxAge:           300,
