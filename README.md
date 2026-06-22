@@ -2,6 +2,8 @@
 
 Your own unlimited cloud drive, backed by Telegram.
 
+[View the drive interface »](docs/screenshot.png)
+
 ## Why?
 
 Telegram gives away **unlimited** file storage for free (2 GB per file, 4 GB on Premium), and nobody actually uses it for that, because the only "UI" is dumping files into Saved Messages and never finding them again.
