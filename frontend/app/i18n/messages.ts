@@ -54,6 +54,7 @@ const en: Table = {
   "nav.users": "Users",
   "nav.telegram": "Telegram",
   "nav.admin": "Admin",
+  "nav.about": "About",
   "sidebar.storageUsed": (p) => `${p.size} used`,
 
   // topbar
@@ -354,6 +355,18 @@ const en: Table = {
   "tag.deleteFailed": "Could not delete tag",
   "tag.loadFailed": "Could not load tag",
   "tag.emptyTitle": "Nothing tagged with this yet",
+
+  // about
+  "about.title": "About Hangar",
+  "about.tagline": "Your own unlimited cloud drive, backed by Telegram.",
+  "about.description":
+    "Hangar puts a real drive on top of Telegram storage: folders, search, " +
+    "previews and sharing. Your files live in a private Telegram channel, and " +
+    "you host the whole thing yourself.",
+  "about.version": (p) => `Version ${p.version}`,
+  "about.viewOnGithub": "View on GitHub",
+  "about.author": "Created by",
+  "about.license": "Licensed under AGPL-3.0",
 };
 
 const ruTable: Table = {
@@ -377,6 +390,7 @@ const ruTable: Table = {
   "nav.users": "Пользователи",
   "nav.telegram": "Telegram",
   "nav.admin": "Администрирование",
+  "nav.about": "О Hangar",
   "sidebar.storageUsed": (p) => `${p.size} занято`,
 
   // topbar
@@ -686,6 +700,18 @@ const ruTable: Table = {
   "tag.deleteFailed": "Не удалось удалить тег",
   "tag.loadFailed": "Не удалось загрузить тег",
   "tag.emptyTitle": "С этим тегом пока ничего нет",
+
+  // about
+  "about.title": "О Hangar",
+  "about.tagline": "Ваш безлимитный облачный диск на основе Telegram.",
+  "about.description":
+    "Hangar превращает хранилище Telegram в полноценный диск: папки, поиск, " +
+    "превью и общий доступ. Ваши файлы хранятся в приватном канале Telegram, " +
+    "а весь сервис вы размещаете у себя.",
+  "about.version": (p) => `Версия ${p.version}`,
+  "about.viewOnGithub": "Открыть на GitHub",
+  "about.author": "Создатель",
+  "about.license": "Лицензия AGPL-3.0",
 };
 
 export const messages: Record<Locale, Table> = { en, ru: ruTable };

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HardDrive, UsersRound, Users, Send, Settings, Database } from 'lucide-vue-next'
+import { HardDrive, UsersRound, Users, Send, Settings, Database, Info } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useSidebar } from '~/composables/useSidebar'
 import { useI18n } from '~/composables/useI18n'
@@ -16,6 +16,7 @@ const nav = [
   { to: '/', labelKey: 'nav.myDrive', icon: HardDrive, exact: true },
   { to: '/shared', labelKey: 'nav.shared', icon: UsersRound, exact: false },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings, exact: false },
+  { to: '/about', labelKey: 'nav.about', icon: Info, exact: false },
 ]
 const adminNav = [
   { to: '/admin/users', labelKey: 'nav.users', icon: Users, exact: false },
