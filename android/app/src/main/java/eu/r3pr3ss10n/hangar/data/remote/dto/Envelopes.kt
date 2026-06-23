@@ -56,6 +56,9 @@ data class LabelsDto(
 data class SharesEnvelope(val shares: List<ShareDto> = emptyList())
 
 @Serializable
+data class MySharesEnvelope(val shares: List<MyShareDto> = emptyList())
+
+@Serializable
 data class GrantsEnvelope(val grants: List<GrantDto> = emptyList())
 
 @Serializable

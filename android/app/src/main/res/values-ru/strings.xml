@@ -125,6 +125,12 @@
     <string name="share_load_failed">Не удалось загрузить ссылки</string>
     <string name="share_create_failed">Не удалось создать ссылку</string>
     <string name="share_revoke_failed">Не удалось отозвать ссылку</string>
+
+    <!-- My links (файлы, на которые я создал публичную ссылку) -->
+    <string name="my_links_title">Мои ссылки</string>
+    <string name="my_links_empty_title">Пока нет ссылок</string>
+    <string name="my_links_empty_subtitle">Создайте ссылку из меню файла, и она появится здесь.</string>
+    <string name="my_links_failed_to_load">Не удалось загрузить ваши ссылки</string>
     <string name="tag_title">Теги</string>
     <string name="tag_new_tag">Новый тег</string>
     <string name="tag_edit_tag">Изменить тег</string>
@@ -161,6 +167,7 @@
     <string name="nav_shared">Доступные мне</string>
     <string name="nav_tags">Теги</string>
     <string name="nav_account">Аккаунт</string>
+    <string name="nav_my_links">Мои ссылки</string>
     <string name="nav_users">Пользователи</string>
 
     <!-- about -->

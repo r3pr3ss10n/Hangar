@@ -37,6 +37,7 @@ import eu.r3pr3ss10n.hangar.ui.admin.UsersScreen
 import eu.r3pr3ss10n.hangar.ui.drive.DriveScreen
 import eu.r3pr3ss10n.hangar.ui.drive.MovePickerSheet
 import eu.r3pr3ss10n.hangar.ui.drive.SheetTarget
+import eu.r3pr3ss10n.hangar.ui.myshares.MySharesScreen
 import eu.r3pr3ss10n.hangar.ui.preview.PreviewScreen
 import eu.r3pr3ss10n.hangar.ui.search.SearchScreen
 import eu.r3pr3ss10n.hangar.ui.shared.SharedScreen
@@ -206,11 +207,19 @@ fun HangarNavHost(
         composable(Routes.ACCOUNT) {
             AccountScreen(
                 user = user,
+                onOpenMyLinks = { navController.navigate(Routes.MY_LINKS) },
                 onOpenUsers = { navController.navigate(Routes.ADMIN_USERS) },
                 onOpenTelegram = { navController.navigate(Routes.ADMIN_TELEGRAM) },
                 onOpenAbout = { navController.navigate(Routes.ABOUT) },
                 onLoggedOut = onLoggedOut,
                 onForgetServer = onForgetServer,
+            )
+        }
+
+        composable(Routes.MY_LINKS) {
+            MySharesScreen(
+                onBack = { navController.popBackStack() },
+                onOpenFile = ::openFile,
             )
         }
 

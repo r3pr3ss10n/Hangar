@@ -24,6 +24,7 @@ import eu.r3pr3ss10n.hangar.data.remote.dto.SetPasswordBody
 import eu.r3pr3ss10n.hangar.data.remote.dto.SettingsDto
 import eu.r3pr3ss10n.hangar.data.remote.dto.SettingsPatchBody
 import eu.r3pr3ss10n.hangar.data.remote.dto.SetupStatusDto
+import eu.r3pr3ss10n.hangar.data.remote.dto.MySharesEnvelope
 import eu.r3pr3ss10n.hangar.data.remote.dto.ShareDto
 import eu.r3pr3ss10n.hangar.data.remote.dto.ShareableUsersEnvelope
 import eu.r3pr3ss10n.hangar.data.remote.dto.SharedRootsDto
@@ -111,6 +112,9 @@ interface HangarApi {
     suspend fun deleteFile(@Path("id") id: String)
 
     // ---- share links ----
+    @GET("api/shares")
+    suspend fun myShares(): MySharesEnvelope
+
     @GET("api/files/{id}/shares")
     suspend fun listShares(@Path("id") fileId: String): SharesEnvelope
 

@@ -7,6 +7,7 @@ import eu.r3pr3ss10n.hangar.data.remote.dto.FolderHitDto
 import eu.r3pr3ss10n.hangar.data.remote.dto.GrantDto
 import eu.r3pr3ss10n.hangar.data.remote.dto.LabelsDto
 import eu.r3pr3ss10n.hangar.data.remote.dto.PathSegmentDto
+import eu.r3pr3ss10n.hangar.data.remote.dto.MyShareDto
 import eu.r3pr3ss10n.hangar.data.remote.dto.ShareDto
 import eu.r3pr3ss10n.hangar.data.remote.dto.ShareableUserDto
 import eu.r3pr3ss10n.hangar.data.remote.dto.SharedFileDto
@@ -20,6 +21,7 @@ import eu.r3pr3ss10n.hangar.domain.Folder
 import eu.r3pr3ss10n.hangar.domain.FolderHit
 import eu.r3pr3ss10n.hangar.domain.Grant
 import eu.r3pr3ss10n.hangar.domain.Labels
+import eu.r3pr3ss10n.hangar.domain.MyShare
 import eu.r3pr3ss10n.hangar.domain.PathSegment
 import eu.r3pr3ss10n.hangar.domain.Role
 import eu.r3pr3ss10n.hangar.domain.Share
@@ -80,6 +82,13 @@ fun LabelsDto.toDomain() = Labels(
 )
 
 fun ShareDto.toDomain() = Share(token = token, createdAt = createdAt, expiresAt = expiresAt)
+
+fun MyShareDto.toDomain() = MyShare(
+    file = file.toDomain(),
+    token = token,
+    createdAt = createdAt,
+    expiresAt = expiresAt,
+)
 
 fun GrantDto.toDomain() = Grant(
     recipientId = recipientId, recipientUsername = recipientUsername, permission = permission,

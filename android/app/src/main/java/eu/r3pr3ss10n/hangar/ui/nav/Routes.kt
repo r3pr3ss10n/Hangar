@@ -10,6 +10,7 @@ object Routes {
 
     // Detail destinations
     const val SEARCH = "search"
+    const val MY_LINKS = "myLinks"
     const val ABOUT = "about"
     const val ADMIN_USERS = "admin/users"
     const val ADMIN_TELEGRAM = "admin/telegram"

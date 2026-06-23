@@ -108,6 +108,15 @@ data class ShareDto(
     @SerialName("expires_at") val expiresAt: String? = null,
 )
 
+// A share link the user created, paired with the file it points at ("My links").
+@Serializable
+data class MyShareDto(
+    val token: String,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("expires_at") val expiresAt: String? = null,
+    val file: FileDto,
+)
+
 @Serializable
 data class GrantDto(
     @SerialName("recipient_id") val recipientId: String,

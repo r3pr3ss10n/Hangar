@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Storage
@@ -40,6 +41,7 @@ import eu.r3pr3ss10n.hangar.ui.drive.ConfirmDialog
 @Composable
 fun AccountScreen(
     user: User,
+    onOpenMyLinks: () -> Unit,
     onOpenUsers: () -> Unit,
     onOpenTelegram: () -> Unit,
     onOpenAbout: () -> Unit,
@@ -104,6 +106,11 @@ fun AccountScreen(
             }
 
             HorizontalDivider()
+            ListItem(
+                modifier = Modifier.clickable(onClick = onOpenMyLinks),
+                leadingContent = { Icon(Icons.Filled.Link, null) },
+                headlineContent = { Text(stringResource(R.string.nav_my_links)) },
+            )
             ListItem(
                 modifier = Modifier.clickable(onClick = onOpenAbout),
                 leadingContent = { Icon(Icons.Filled.Info, null) },

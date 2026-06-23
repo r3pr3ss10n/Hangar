@@ -126,6 +126,12 @@
     <string name="share_load_failed">Failed to load</string>
     <string name="share_create_failed">Failed to create link</string>
     <string name="share_revoke_failed">Failed to revoke</string>
+
+    <!-- My links (files I've shared a public link for) -->
+    <string name="my_links_title">My links</string>
+    <string name="my_links_empty_title">No share links yet</string>
+    <string name="my_links_empty_subtitle">Create a link from a file\'s menu and it shows up here.</string>
+    <string name="my_links_failed_to_load">Failed to load your links</string>
     <string name="tag_title">Tags</string>
     <string name="tag_new_tag">New tag</string>
     <string name="tag_edit_tag">Edit tag</string>
@@ -162,6 +168,7 @@
     <string name="nav_shared">Shared</string>
     <string name="nav_tags">Tags</string>
     <string name="nav_account">Account</string>
+    <string name="nav_my_links">My links</string>
     <string name="nav_users">Users</string>
 
     <!-- about -->

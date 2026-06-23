@@ -4,6 +4,7 @@ import eu.r3pr3ss10n.hangar.data.remote.HangarApi
 import eu.r3pr3ss10n.hangar.data.remote.dto.CreateGrantBody
 import eu.r3pr3ss10n.hangar.data.remote.dto.CreateShareBody
 import eu.r3pr3ss10n.hangar.domain.Grant
+import eu.r3pr3ss10n.hangar.domain.MyShare
 import eu.r3pr3ss10n.hangar.domain.Share
 import eu.r3pr3ss10n.hangar.domain.ShareableUser
 import eu.r3pr3ss10n.hangar.domain.SharedRoots
@@ -19,6 +20,10 @@ class SharingRepository @Inject constructor(
     private val api: HangarApi,
 ) {
     // ---- public share links ----
+    suspend fun myShares(): List<MyShare> = runApi {
+        api.myShares().shares.map { it.toDomain() }
+    }
+
     suspend fun listShares(fileId: String): List<Share> = runApi {
         api.listShares(fileId).shares.map { it.toDomain() }
     }

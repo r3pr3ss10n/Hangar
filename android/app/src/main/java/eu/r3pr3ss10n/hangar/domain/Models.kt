@@ -78,6 +78,14 @@ data class Share(
     val expiresAt: String?,
 )
 
+/** A share link the current user created, paired with the file it points at. */
+data class MyShare(
+    val file: FileItem,
+    val token: String,
+    val createdAt: String,
+    val expiresAt: String?,
+)
+
 data class Grant(
     val recipientId: String,
     val recipientUsername: String,
