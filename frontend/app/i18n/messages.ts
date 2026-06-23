@@ -50,6 +50,7 @@ const en: Table = {
 
   // navigation / sidebar
   "nav.myDrive": "My Drive",
+  "nav.myLinks": "My links",
   "nav.settings": "Settings",
   "nav.users": "Users",
   "nav.telegram": "Telegram",
@@ -340,6 +341,15 @@ const en: Table = {
   "shared.loadFailed": "Could not load shared items",
   "shared.sharedBy": (p) => `from ${p.name}`,
 
+  // my links page (files I've created public share links for)
+  "links.title": "My links",
+  "links.subtitle": "Files you've shared with a public link.",
+  "links.emptyTitle": "No share links yet",
+  "links.emptyDesc": "Create a link from a file's menu and it shows up here.",
+  "links.loadFailed": "Could not load your links",
+  "links.copy": "Copy link",
+  "links.revoke": "Revoke link",
+
   // navigation
   "nav.tags": "Tags",
 
@@ -387,6 +397,7 @@ const ruTable: Table = {
 
   // navigation / sidebar
   "nav.myDrive": "Мой диск",
+  "nav.myLinks": "Мои ссылки",
   "nav.settings": "Настройки",
   "nav.users": "Пользователи",
   "nav.telegram": "Telegram",
@@ -685,6 +696,15 @@ const ruTable: Table = {
     "Когда кто-то поделится файлом или папкой, это появится здесь.",
   "shared.loadFailed": "Не удалось загрузить общие элементы",
   "shared.sharedBy": (p) => `от ${p.name}`,
+
+  // my links page (файлы, на которые я создал публичные ссылки)
+  "links.title": "Мои ссылки",
+  "links.subtitle": "Файлы, которыми вы поделились по ссылке.",
+  "links.emptyTitle": "Пока нет ссылок",
+  "links.emptyDesc": "Создайте ссылку из меню файла, и она появится здесь.",
+  "links.loadFailed": "Не удалось загрузить ваши ссылки",
+  "links.copy": "Копировать ссылку",
+  "links.revoke": "Удалить ссылку",
 
   // navigation
   "nav.tags": "Теги",

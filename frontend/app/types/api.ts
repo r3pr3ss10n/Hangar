@@ -67,6 +67,11 @@ export interface Share {
   expires_at: string | null
 }
 
+/** A share link the user created, paired with the file it points at (My links). */
+export interface MyShare extends Share {
+  file: FileItem
+}
+
 /** Public metadata for a shared file, served to anyone holding the token. */
 export interface SharedFile {
   name: string

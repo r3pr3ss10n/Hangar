@@ -8,6 +8,7 @@ import type {
   SetupStatus,
   TelegramState,
   Share,
+  MyShare,
   SharedFile,
   ShareableUser,
   Grant,
@@ -128,6 +129,9 @@ export function useApi() {
 
   const listShares = (fileId: string) =>
     api<{ shares: Share[] }>(`/api/files/${fileId}/shares`)
+
+  /** Every share link the user created, each paired with its file (My links). */
+  const myShares = () => api<{ shares: MyShare[] }>('/api/shares')
 
   /**
    * createShare mints a public link for a file. `expiresInSeconds` is the
@@ -384,6 +388,7 @@ export function useApi() {
     downloadUrl,
     thumbUrl,
     listShares,
+    myShares,
     createShare,
     deleteShare,
     shareInfo,
