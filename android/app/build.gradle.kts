@@ -18,16 +18,37 @@ android {
         applicationId = "eu.r3pr3ss10n.hangar"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
+        // In CI each build gets a unique, increasing versionCode from the run
+        // number so releases install over one another. Falls back to 1 locally.
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            // Populated from environment variables in CI. When absent (e.g. local
+            // builds), this config stays empty and the release build falls back to
+            // producing an unsigned APK.
+            val keystorePath = System.getenv("KEYSTORE_FILE")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             optimization {
                 enable = false
+            }
+            // Only sign when the keystore was provided via env vars.
+            if (System.getenv("KEYSTORE_FILE") != null) {
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }
