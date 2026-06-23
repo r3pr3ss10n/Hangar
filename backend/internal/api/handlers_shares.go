@@ -30,6 +30,51 @@ func newShareViews(ss []dbsqlc.FileShare) []shareView {
 	return out
 }
 
+// myShareView is one row of the owner's "My links" page: a share link paired
+// with the file it points at, so the UI can render the target and rebuild the URL
+// from the token.
+type myShareView struct {
+	Token     string     `json:"token"`
+	CreatedAt time.Time  `json:"created_at"`
+	ExpiresAt *time.Time `json:"expires_at"`
+	File      fileView   `json:"file"`
+}
+
+// handleListMyShares returns every share link the caller has created, across all
+// of their files, newest link first.
+func (s *Server) handleListMyShares(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		s.writeErr(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	rows, err := s.files.ListSharesByOwner(r.Context(), user.ID)
+	if err != nil {
+		s.writeServiceErr(w, err)
+		return
+	}
+	out := make([]myShareView, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, myShareView{
+			Token:     row.ShareToken,
+			CreatedAt: row.ShareCreatedAt,
+			ExpiresAt: row.ShareExpiresAt,
+			File: fileView{
+				ID:        row.ID,
+				OwnerID:   row.OwnerID,
+				FolderID:  row.FolderID,
+				Name:      row.Name,
+				Size:      row.Size,
+				Mime:      row.Mime,
+				SHA256:    row.Sha256,
+				HasThumb:  len(row.ThumbRef) > 0,
+				CreatedAt: row.CreatedAt,
+			},
+		})
+	}
+	s.writeJSON(w, http.StatusOK, map[string]any{"shares": out})
+}
+
 // sharedFileView is the public projection returned to anyone holding a valid
 // share token: enough to render the landing page, with no Telegram handle or
 // owner identity.

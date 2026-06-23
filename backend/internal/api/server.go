@@ -161,6 +161,7 @@ func (s *Server) Router() http.Handler {
 			r.Delete("/files/{id}", s.handleDeleteFile)
 
 			// public share links (owner-managed token capability)
+			r.Get("/shares", s.handleListMyShares)
 			r.Get("/files/{id}/shares", s.handleListShares)
 			r.Post("/files/{id}/shares", s.handleCreateShare)
 			r.Delete("/shares/{token}", s.handleDeleteShare)

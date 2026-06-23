@@ -55,6 +55,10 @@ type Querier interface {
 	ListDeletedFiles(ctx context.Context) ([]File, error)
 	ListFileGrants(ctx context.Context, fileID *uuid.UUID) ([]ListFileGrantsRow, error)
 	ListFileSharesByFile(ctx context.Context, fileID uuid.UUID) ([]FileShare, error)
+	// Every share link the user created, newest link first, joined to its live file
+	// so the caller can render the target. Soft-deleted files are excluded, matching
+	// the public lookup. A file shared more than once yields one row per link.
+	ListFileSharesByOwner(ctx context.Context, createdBy uuid.UUID) ([]ListFileSharesByOwnerRow, error)
 	// Lists files without ever reading the (TOASTed) thumbnail bytes: thumb_ref is
 	// collapsed to a 1-byte presence marker via IS NULL (which never detoasts), so a
 	// folder of images is not dragged off disk just to compute has_thumb.

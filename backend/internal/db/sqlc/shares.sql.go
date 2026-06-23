@@ -150,3 +150,76 @@ func (q *Queries) ListFileSharesByFile(ctx context.Context, fileID uuid.UUID) ([
 	}
 	return items, nil
 }
+
+const listFileSharesByOwner = `-- name: ListFileSharesByOwner :many
+SELECT f.id, f.owner_id, f.folder_id, f.name, f.size, f.mime, f.sha256, f.tg_message_id, f.tg_document_id, f.tg_access_hash, f.tg_file_reference, f.tg_dc_id, f.thumb_ref, f.created_at, f.deleted_at, f.enc_iv, s.token AS share_token, s.created_at AS share_created_at, s.expires_at AS share_expires_at
+FROM file_shares s
+JOIN files f ON f.id = s.file_id
+WHERE s.created_by = $1 AND f.deleted_at IS NULL
+ORDER BY s.created_at DESC
+`
+
+type ListFileSharesByOwnerRow struct {
+	ID              uuid.UUID  `json:"id"`
+	OwnerID         uuid.UUID  `json:"owner_id"`
+	FolderID        *uuid.UUID `json:"folder_id"`
+	Name            string     `json:"name"`
+	Size            int64      `json:"size"`
+	Mime            string     `json:"mime"`
+	Sha256          string     `json:"sha256"`
+	TgMessageID     int64      `json:"tg_message_id"`
+	TgDocumentID    int64      `json:"tg_document_id"`
+	TgAccessHash    int64      `json:"tg_access_hash"`
+	TgFileReference []byte     `json:"tg_file_reference"`
+	TgDcID          int32      `json:"tg_dc_id"`
+	ThumbRef        []byte     `json:"thumb_ref"`
+	CreatedAt       time.Time  `json:"created_at"`
+	DeletedAt       *time.Time `json:"deleted_at"`
+	EncIv           []byte     `json:"enc_iv"`
+	ShareToken      string     `json:"share_token"`
+	ShareCreatedAt  time.Time  `json:"share_created_at"`
+	ShareExpiresAt  *time.Time `json:"share_expires_at"`
+}
+
+// Every share link the user created, newest link first, joined to its live file
+// so the caller can render the target. Soft-deleted files are excluded, matching
+// the public lookup. A file shared more than once yields one row per link.
+func (q *Queries) ListFileSharesByOwner(ctx context.Context, createdBy uuid.UUID) ([]ListFileSharesByOwnerRow, error) {
+	rows, err := q.db.Query(ctx, listFileSharesByOwner, createdBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFileSharesByOwnerRow
+	for rows.Next() {
+		var i ListFileSharesByOwnerRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.FolderID,
+			&i.Name,
+			&i.Size,
+			&i.Mime,
+			&i.Sha256,
+			&i.TgMessageID,
+			&i.TgDocumentID,
+			&i.TgAccessHash,
+			&i.TgFileReference,
+			&i.TgDcID,
+			&i.ThumbRef,
+			&i.CreatedAt,
+			&i.DeletedAt,
+			&i.EncIv,
+			&i.ShareToken,
+			&i.ShareCreatedAt,
+			&i.ShareExpiresAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

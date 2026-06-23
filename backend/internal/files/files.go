@@ -243,6 +243,16 @@ func (s *Service) ListShares(ctx context.Context, ownerID, fileID uuid.UUID) ([]
 	return shares, nil
 }
 
+// ListSharesByOwner returns every share link the caller created, each joined to
+// its live file, newest link first. Soft-deleted files are excluded.
+func (s *Service) ListSharesByOwner(ctx context.Context, ownerID uuid.UUID) ([]dbsqlc.ListFileSharesByOwnerRow, error) {
+	rows, err := s.q.ListFileSharesByOwner(ctx, ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("list shares by owner: %w", err)
+	}
+	return rows, nil
+}
+
 // DeleteShare revokes a share link, but only when the caller owns the file the
 // link points at. An unknown or foreign token maps to ErrNotFound.
 func (s *Service) DeleteShare(ctx context.Context, ownerID uuid.UUID, token string) error {
